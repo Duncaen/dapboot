@@ -59,13 +59,14 @@ static void jump_to_application(void) {
 }
 
 int main(void) {
-    /* Setup clocks */
-    target_clock_setup();
 
     /* Initialize GPIO/LEDs if needed */
     target_gpio_setup();
 
     if (target_get_force_bootloader() || !validate_application()) {
+        /* Setup clocks */
+        target_clock_setup();
+
         /* Setup USB */
         {
             char serial[USB_SERIAL_NUM_LENGTH+1];
