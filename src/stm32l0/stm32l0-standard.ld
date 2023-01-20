@@ -19,4 +19,4 @@ MEMORY
 }
 
 /* Include the common ld script. */
-INCLUDE stm32l1/stm32l1-base.ld
+INCLUDE stm32l0/stm32l0-base.ld
