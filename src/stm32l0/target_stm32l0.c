@@ -29,6 +29,18 @@
 #include "config.h"
 #include "backup.h"
 
+#ifndef USES_GPIOA
+#define USES_GPIOA 0
+#endif
+
+#ifndef USES_GPIOB
+#define USES_GPIOB 0
+#endif
+
+#ifndef USES_GPIOC
+#define USES_GPIOC 0
+#endif
+
 static const uint32_t CMD_BOOT = 0x544F4F42UL;
 
 void target_clock_setup(void) {
@@ -63,11 +75,32 @@ void target_clock_setup(void) {
 
 void target_gpio_setup(void)
 {
+	/* Enable GPIO clocks */
+	if (USES_GPIOA) {
+		rcc_periph_clock_enable(RCC_GPIOA);
+	}
+	if (USES_GPIOB) {
+		rcc_periph_clock_enable(RCC_GPIOB);
+	}
+	if (USES_GPIOC) {
+		rcc_periph_clock_enable(RCC_GPIOC);
+	}
+	/* Setup LEDs */
 #if HAVE_LED
-#warning HAVE_LED not implemented for this target
+	{
+		gpio_mode_setup(LED_GPIO_PORT, GPIO_MODE_OUTPUT, GPIO_PUPD_NONE, LED_GPIO_PIN);
+		if (LED_OPEN_DRAIN) {
+			gpio_set(LED_GPIO_PORT, LED_GPIO_PIN);
+		} else {
+			gpio_clear(LED_GPIO_PORT, LED_GPIO_PIN);
+		}
+	}
 #endif
+    /* Setup the internal pull-up/pull-down for the button */
 #if HAVE_BUTTON
-#warning HAVE_BUTTON not implemented for this target
+	{
+		gpio_mode_setup(BUTTON_GPIO_PORT, GPIO_MODE_INPUT, GPIO_PUPD_NONE, BUTTON_GPIO_PIN);
+	}
 #endif
 }
 
@@ -98,7 +131,21 @@ bool target_get_force_bootloader(void)
 	backup_write(BKP0, 0);
 
 #if HAVE_BUTTON
-#warning HAVE_BUTTON not implemented for this target
+	/* Wait some time in case the button has some debounce capacitor */
+	int i;
+	for (i = 0; i < BUTTON_SAMPLE_DELAY_CYCLES; i++) {
+		__asm__("nop");
+	}
+	/* Check if the user button is held down */
+	if (BUTTON_ACTIVE_HIGH) {
+		if (gpio_get(BUTTON_GPIO_PORT, BUTTON_GPIO_PIN)) {
+			enter_bl = true;
+		}
+	} else {
+		if (!gpio_get(BUTTON_GPIO_PORT, BUTTON_GPIO_PIN)) {
+			enter_bl = true;
+		}
+	}
 #endif
 	
 	return enter_bl;
